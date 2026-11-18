@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>What I Did</title>
+<meta name="description" content="It interrupts you, asks what you just did, and grades the week against your own goals. Free, open source, local-first.">
+<meta name="theme-color" content="#f6f4ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14130f" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div id="app" class="app">
+  <aside class="rail" aria-label="Sections">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">What I&nbsp;Did</span>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button class="nav-item" data-view="today"><span class="nav-num">01</span> Today</button>
+      <button class="nav-item" data-view="week"><span class="nav-num">02</span> The week</button>
+      <button class="nav-item" data-view="report"><span class="nav-num">03</span> Report</button>
+      <button class="nav-item" data-view="settings"><span class="nav-num">04</span> Settings</button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="clock" id="clock">
+        <div class="clock-line"><span id="clock-label">Next question</span></div>
+        <div class="clock-value" id="clock-value">—</div>
+      </div>
+      <div class="rail-actions">
+        <button class="mini" id="btn-deepwork" title="Hold questions until you come back up">Deep Work</button>
+        <button class="mini" id="btn-mute" title="Stop asking, but keep the log">Mute</button>
+      </div>
+      <div class="rail-path" id="rail-path">—</div>
+    </div>
+  </aside>
+
+  <main class="main" id="main" tabindex="-1">
+    <div class="loading">Reading your files…</div>
+  </main>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast-root" class="toast-root" aria-live="polite"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

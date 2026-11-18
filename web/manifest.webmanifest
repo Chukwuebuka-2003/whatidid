@@ -1,0 +1,17 @@
+{
+  "name": "What I Did",
+  "short_name": "What I Did",
+  "description": "It interrupts you, asks what you just did, and grades the week against your own goals.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f4ee",
+  "theme_color": "#f6f4ee",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

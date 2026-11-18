@@ -1,0 +1,18 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# the app's own data, if someone points it at the repo
+data/
+*.log
+.whatidid/
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/
