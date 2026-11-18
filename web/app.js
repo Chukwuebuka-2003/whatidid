@@ -917,6 +917,7 @@ async function setSetting(key, value, { immediate = true } = {}) {
       const res = await put('/api/settings', { [key]: value });
       state.boot.settings = res.settings;
       state.settingsDraft = { ...res.settings, llm_api_key: state.settingsDraft.llm_api_key };
+      state.boot.due = await api('/api/due');
       updateClock();
     } catch (err) { toast(err.message, true); }
   }
@@ -929,6 +930,11 @@ async function setTone(tone) {
     state.boot.settings = res.settings;
   } catch (err) { toast(err.message, true); }
   render();
+  // A tone is a delivery, not a setting you come back to on Sunday: if a report
+  // already exists, rewrite it now so the change is visible where it was made.
+  if (state.view === 'report' && state.tab === 'week' && state.boot.week.report) {
+    await gradeWeek();
+  }
 }
 
 async function gradeWithNewTone() {
