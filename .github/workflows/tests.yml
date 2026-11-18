@@ -1,0 +1,44 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: pip install fastapi uvicorn httpx
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -t . -v
+
+      - name: The CLI boots and reads an empty folder
+        run: |
+          python -m whatidid status --data "$RUNNER_TEMP/data"
+          python -m whatidid grade --data "$RUNNER_TEMP/data" > /dev/null
+          test -f "$RUNNER_TEMP/data/$(date +%Y)/$(date +%Y-W%V)/report.md"
+
+      - name: The app answers on loopback
+        run: |
+          python -m whatidid serve --data "$RUNNER_TEMP/data2" --port 8799 --no-open --log-level warning &
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8799/healthz > /dev/null; then break; fi
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:8799/healthz | tee /dev/stderr | grep -q '"ok":true'
+          curl -fsS http://127.0.0.1:8799/ | grep -q "What I"
