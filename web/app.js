@@ -256,7 +256,7 @@ function rubricList(items, opts = {}) {
     const mins = stat ? stat.total_minutes : 0;
     const estimated = stat && stat.estimated_minutes > 0 && stat.exact_minutes === 0;
     return `
-      <div class="rubric-item ${item.done ? 'is-done' : ''}">
+      <div class="rubric-item ${item.done ? 'is-done' : ''}" data-action="toggle-plan" data-section="${opts.section}" data-index="${i}" title="${item.done ? 'Mark not done' : 'Mark done'}">
         <button class="tick ${item.done ? 'on' : ''}" data-action="toggle-plan" data-section="${opts.section}" data-index="${i}" aria-label="${item.done ? 'Mark not done' : 'Mark done'}">✓</button>
         <div>
           <div class="rubric-text">${esc(item.text)}</div>
@@ -309,8 +309,7 @@ function viewToday(boot) {
       <div>
         <div class="eyebrow">${esc(fmtDateLong(today))}</div>
         <h1>Today</h1>
-        <div class="sub">${todays.filter((e) => e.kind !== 'missed').length} entries · ${fmtDuration(logged)} on the record
-          ${boot.due.paused ? ` · <span style="color:var(--warn)">${esc(pausedLabel(boot.due.paused))}</span>` : ''}</div>
+        <div class="sub">${todays.filter((e) => e.kind !== 'missed').length} entries · ${fmtDuration(logged)} on the record</div>
       </div>
       <div class="row">
         <button class="btn ghost" data-action="log-manual">Add a line</button>
@@ -339,7 +338,7 @@ function viewToday(boot) {
       <section>
         <div class="spread" style="margin-bottom:6px">
           <h2>Today's tasks</h2>
-          <span class="small">${plan.week.length ? `${weekDone} of ${plan.week.length} objectives done` : ''}</span>
+          <span class="small">${plan.today.length ? `${plan.today.filter((i) => i.done).length} of ${plan.today.length} done today` : ''}</span>
         </div>
         ${staleToday ? `
           <div class="callout" style="margin:10px 0">
@@ -355,7 +354,7 @@ function viewToday(boot) {
       <section>
         <div class="spread" style="margin-bottom:6px">
           <h2>What this week is for</h2>
-          <span class="small">${esc(plan.month_label || '')}</span>
+          <span class="small">${plan.week.length ? `${weekDone} of ${plan.week.length} done` : ''}${plan.month_label ? `${plan.week.length ? ' · ' : ''}${esc(plan.month_label)}` : ''}</span>
         </div>
         <div class="rubric">
           ${rubricList(plan.week, { section: 'week', showTag: true, empty: 'No objectives yet. Two or three is enough — this list is the rubric you get graded against.' })}
@@ -512,14 +511,23 @@ function viewReport(boot) {
   const comp = a.components;
   const isCurrent = week.iso === boot.current_week;
 
+  const metricLabels = {
+    'plan completion': 'How many of your objectives got time',
+    'time on plan': 'Share of logged time that matched the plan',
+    'record coverage': 'Share of questions answered and days recorded',
+    'time off the rails': 'Share of logged time free of distractions',
+  };
+  const metrics = [['plan completion', comp.completion], ['time on plan', comp.alignment], ['record coverage', comp.coverage], ['time off the rails', comp.focus]];
+  const valid = metrics.filter(([, v]) => v != null).map(([, v]) => v);
+  const weakest = valid.length ? Math.min(...valid) : null;
   const bars = `
     <div class="bars">
-      ${[['plan completion', comp.completion], ['time on plan', comp.alignment], ['record coverage', comp.coverage], ['time off the rails', comp.focus]]
-        .map(([label, value]) => `
-          <div class="bar-row">
+      <div class="small">Score breakdown · 0–100</div>
+      ${metrics.map(([label, value]) => `
+          <div class="bar-row" title="${esc(metricLabels[label] || '')}">
             <span>${label}</span>
-            <span class="bar-track"><span class="bar-fill ${value != null && value < 50 ? 'low' : ''}" style="width:${value ?? 0}%"></span></span>
-            <span class="bar-val">${value ?? '—'}</span>
+            <span class="bar-track"><span class="bar-fill ${value != null && value < 50 ? 'low' : ''} ${value != null && value === weakest ? 'is-weak' : ''}" style="width:${value ?? 0}%"></span></span>
+            <span class="bar-val">${value == null ? '—' : `${Math.round(value)}%`}</span>
           </div>`).join('')}
     </div>`;
 
@@ -564,15 +572,16 @@ function viewReport(boot) {
       <div>
         <div class="eyebrow">Week ${week.iso.split('-W')[1]} · ${esc(fmtDateShort(week.start))} – ${esc(fmtDateShort(week.end))}</div>
         <h1>Report</h1>
-        <div class="sub">${a.answered} answers, ${a.missed} misses · ${fmtDuration(a.logged_minutes)} on the record
+        <div class="sub">${a.answered} ${a.answered === 1 ? 'answer' : 'answers'}, ${a.missed} ${a.missed === 1 ? 'miss' : 'misses'} · ${fmtDuration(a.logged_minutes)} on the record
           ${report ? ` · graded ${esc(fmtRelative(report.generated_at))}` : ''}</div>
       </div>
       <div class="row">
-        <div class="seg" role="group" aria-label="Tone">
+        <span class="small">Tone</span>
+        <div class="seg" role="group" aria-label="Report tone">
           ${['gentle', 'honest', 'brutal'].map((t) => `
             <button class="${boot.settings.tone === t ? 'is-on' : ''}" data-action="set-tone" data-tone="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}
         </div>
-        <button class="btn accent" data-action="grade-week">${report ? 'Re-grade' : 'Grade the week'}</button>
+        ${report ? '<button class="btn accent" data-action="grade-week">Re-grade</button>' : ''}
       </div>
     </header>
     ${tabs}
@@ -743,7 +752,7 @@ function openPop(force) {
   const plan = state.boot.week.plan;
   const chips = [...(plan.today || []), ...(plan.week || [])]
     .slice(0, 8)
-    .map((i) => `<button class="chip" data-action="chip" data-slug="${esc(i.slug)}">#${esc(i.slug)}</button>`)
+    .map((i) => `<button class="chip" data-action="chip" data-slug="${esc(i.slug)}" aria-pressed="false">#${esc(i.slug)}</button>`)
     .join('');
 
   const root = $('#modal-root');
@@ -753,17 +762,20 @@ function openPop(force) {
         <div class="eyebrow">${force ? 'Logging now' : 'Check-in'}</div>
         <h2 class="pop-q" id="pop-q">What did you do in the last ${fmtDuration(minutes)}?</h2>
         <span class="pop-span">${esc(span)} · one line, six seconds</span>
-        <textarea id="pop-input" placeholder="Drafted the client proposal, sent it for review" spellcheck="true"></textarea>
-        ${chips ? `<div class="chips">${chips}</div>` : ''}
+        <textarea id="pop-input" aria-label="What you just did" placeholder="Drafted the client proposal, sent it for review" spellcheck="true"></textarea>
+        ${chips ? `<div class="chips" role="group" aria-label="Suggested objectives">${chips}</div>` : ''}
         <div class="pop-actions">
-          <button class="btn accent" data-action="pop-save">Save it <span class="kbd" style="border-color:rgba(255,255,255,.4);color:inherit;background:transparent">↵</span></button>
+          <button class="btn accent" data-action="pop-save">Save it <span class="kbd">↵</span></button>
           <button class="btn ghost" data-action="pop-snooze">Snooze 15m</button>
           <span class="spacer"></span>
-          <button class="btn link" data-action="pop-skip">Skip</button>
-          <button class="btn link" data-action="pop-deepwork">Deep Work</button>
+          <span class="link-group">
+            <button class="btn link" data-action="pop-skip">Skip</button>
+            <button class="btn link" data-action="pop-deepwork">Deep Work</button>
+          </span>
         </div>
         <div class="pop-foot">
-          <span>Esc snoozes · <span class="kbd">#</span> tags credit an objective exactly</span>
+          <span class="key-hint"><span class="kbd">Esc</span> snoozes · </span>
+          <span><span class="kbd">#</span> tags credit an objective exactly</span>
         </div>
       </div>
     </div>`;
@@ -937,9 +949,6 @@ async function setTone(tone) {
   }
 }
 
-async function gradeWithNewTone() {
-  if (state.boot.week.report) await gradeWeek();
-}
 
 /* ----------------------------------------------------------------- clock */
 function updateClock() {
@@ -1085,6 +1094,7 @@ document.addEventListener('click', async (e) => {
         if (!input.value.includes(el.dataset.slug)) input.value = input.value.trim() + tag + ' ';
         input.focus();
         el.classList.add('is-used');
+        el.setAttribute('aria-pressed', 'true');
         break;
       }
     }

@@ -127,8 +127,9 @@ class ApiTest(unittest.TestCase):
         iso = self.client.get("/api/bootstrap?week=2026-11-18").json()["week"]["iso"]
         patched = self.client.patch(f"/api/entries/{iso}/0", json={"text": "fixed the typo"})
         self.assertEqual(patched.status_code, 200)
-        self.assertEqual(self.client.get("/api/bootstrap").json()["week"]["entries"][0]["text"],
-                         "fixed the typo")
+        self.assertEqual(
+            self.client.get(f"/api/bootstrap?week={iso}").json()["week"]["entries"][0]["text"],
+            "fixed the typo")
         self.assertEqual(self.client.delete(f"/api/entries/{iso}/0").status_code, 200)
         self.assertEqual(self.client.delete(f"/api/entries/{iso}/5").status_code, 404)
 
